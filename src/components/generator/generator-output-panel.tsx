@@ -14,7 +14,7 @@ import {
   exportSequenceAsMarkdown,
   exportSequenceAsPdf,
   exportSequenceAsTxt,
-  type ExportableSequence,
+  toExportableSequence,
 } from "@/lib/export";
 import { formatEmailAsText } from "@/lib/export/format-text";
 import { Badge } from "@/components/ui/badge";
@@ -46,19 +46,6 @@ const emailItemVariants: Variants = {
   hidden: { opacity: 0, y: 12 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] } },
 };
-
-function toExportableSequence(sequence: SavedSequence): ExportableSequence {
-  return {
-    title: `${sequence.businessName} — ${sequence.targetAudience}`,
-    subtitle: `Built with the ${frameworkName(sequence.framework)} framework`,
-    emails: sequence.emails.map((email) => ({
-      label: email.label,
-      subject: email.subject,
-      body: getEmailPlainText(email),
-      delayDays: email.delayDays,
-    })),
-  };
-}
 
 async function copyEmail(email: SavedSequenceEmail) {
   const plainText = formatEmailAsText({

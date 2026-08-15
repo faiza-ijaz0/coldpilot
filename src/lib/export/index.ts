@@ -6,6 +6,7 @@ import { downloadTextFile } from "@/lib/export/download";
 import { slugify } from "@/lib/export/slugify";
 
 export type { ExportableEmail, ExportableSequence };
+export { toExportableSequence } from "@/lib/export/to-exportable-sequence";
 
 export async function copyAllEmails(sequence: ExportableSequence) {
   await navigator.clipboard.writeText(formatSequenceAsText(sequence));

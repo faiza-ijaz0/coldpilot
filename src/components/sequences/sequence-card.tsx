@@ -14,17 +14,9 @@ import {
 import { toast } from "sonner";
 
 import type { EmailSlot, SavedSequence } from "@/types";
-import { frameworkName } from "@/lib/generator/frameworks";
 import { getNicheConfig } from "@/lib/personalization/engine";
 import { toneOptions } from "@/lib/generator/tone-options";
-import { getEmailPlainText } from "@/lib/html-utils";
-import {
-  copyAllEmails,
-  exportSequenceAsMarkdown,
-  exportSequenceAsPdf,
-  exportSequenceAsTxt,
-  type ExportableSequence,
-} from "@/lib/export";
+import { copyAllEmails, exportSequenceAsMarkdown, exportSequenceAsPdf, exportSequenceAsTxt, toExportableSequence } from "@/lib/export";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -52,19 +44,6 @@ interface SequenceCardProps {
 
 function toneLabel(value: SavedSequence["tone"]): string {
   return toneOptions.find((tone) => tone.value === value)?.label ?? value;
-}
-
-function toExportableSequence(sequence: SavedSequence): ExportableSequence {
-  return {
-    title: sequence.name,
-    subtitle: `${getNicheConfig(sequence.industry).label} · ${frameworkName(sequence.framework)}`,
-    emails: sequence.emails.map((email) => ({
-      label: email.label,
-      subject: email.subject,
-      body: getEmailPlainText(email),
-      delayDays: email.delayDays,
-    })),
-  };
 }
 
 function scoreTextClass(score: number): string {
