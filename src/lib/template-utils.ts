@@ -13,17 +13,42 @@ export function pickMany<T>(options: T[], count: number): T[] {
   return shuffled.slice(0, count);
 }
 
-/**
- * Fills `{{field}}` placeholders from a values map. Any placeholder with no
- * matching key (e.g. recipient-side merge fields like {{first_name}} or
- * {{company}}) is left untouched — those are resolved later, per-prospect,
- * by the sending tool.
- */
+/** Fills `{{field}}` placeholders from a values map. Any placeholder with no matching key is left as-is. */
 export function fillPlaceholders(text: string, values: Record<string, string>): string {
   return Object.entries(values).reduce(
     (result, [key, value]) => result.replaceAll(`{{${key}}}`, value),
     text
   );
+}
+
+function placeholderRegex(): RegExp {
+  return /\{\{\s*[\w.]+\s*\}\}/g;
+}
+
+/** Returns any `{{field}}` tokens still present in text after `fillPlaceholders` — a generated email must never contain these. */
+export function findUnresolvedPlaceholders(text: string): string[] {
+  return text.match(placeholderRegex()) ?? [];
+}
+
+/**
+ * Last-resort cleanup for text that still has unresolved `{{field}}` tokens
+ * after filling — removes the tokens and tidies the whitespace/punctuation
+ * left behind, so a stray or legacy placeholder never reaches the UI.
+ */
+export function stripUnresolvedPlaceholders(text: string): string {
+  return text
+    .replace(placeholderRegex(), "")
+    .replace(/[ \t]+,/g, ",")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/ +\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** Fills placeholders, then guarantees no `{{field}}` token survives in the result. */
+export function resolveTemplate(text: string, values: Record<string, string>): string {
+  const filled = fillPlaceholders(text, values);
+  return findUnresolvedPlaceholders(filled).length > 0 ? stripUnresolvedPlaceholders(filled) : filled;
 }
 
 export function joinParagraphs(paragraphs: string[]): string {

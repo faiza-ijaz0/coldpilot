@@ -7,6 +7,8 @@ export function toScorableResult(sequence: SavedSequence): GeneratorResult {
     id: sequence.id,
     input: {
       businessName: sequence.businessName,
+      senderName: sequence.senderName,
+      recipientFirstName: sequence.recipientFirstName,
       industry: sequence.industry,
       targetAudience: sequence.targetAudience,
       painPoint: sequence.painPoint,

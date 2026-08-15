@@ -1,78 +1,79 @@
 import type { DimensionAnalysis, GeneratorResult } from "@/types";
-import { getEmailPlainText } from "@/lib/html-utils";
-import { clamp, containsAny, tokenize, wordOverlapRatio } from "@/lib/quality-score/text-utils";
+import { clamp } from "@/lib/quality-score/text-utils";
 
-const IMPACT_KEYWORDS = [
-  "cost",
-  "costly",
-  "wasted",
-  "waste",
-  "losing",
-  "lose",
-  "slipping",
-  "slip",
-  "missed",
-  "miss",
-  "drop",
-  "dropping",
-  "bottleneck",
-  "risk",
-  "expensive",
-  "falling through",
-  "quietly",
-];
+const QUALIFIER_PHRASE =
+  /\b(from|in|during|on|for|at|with|due to|because|caused by|among|across|within|per|when|after|before)\b/i;
+const MEASUREMENT_WORD =
+  /\b(rate|rates|ratio|percent|percentage|conversion|conversions|retention|churn|response ?time|turnaround|no-?shows?|abandonment|drop-?off|lead ?time|cycle ?time|volume|throughput|revenue|margin|utilization|occupancy|bookings?|show ?rate)\b/i;
+
+interface SpecificityBreakdown {
+  score: number;
+  hasQualifier: boolean;
+  hasMeasurement: boolean;
+}
+
+/**
+ * Contextual specificity, not a naive word-count threshold: length gives a
+ * capped base ("marketing" tops out low no matter what), a qualifying
+ * clause ("...from mobile traffic") adds real specificity, and reaching
+ * the top tier requires a concrete, measurable anchor (a metric or a
+ * number) — not just more words.
+ */
+function specificityBreakdown(painPoint: string): SpecificityBreakdown {
+  const trimmed = painPoint.trim();
+  const wordCount = trimmed.split(/\s+/).filter(Boolean).length;
+  const hasNumber = /\d/.test(trimmed);
+  const hasQualifier = QUALIFIER_PHRASE.test(trimmed);
+  const hasMeasurement = MEASUREMENT_WORD.test(trimmed);
+
+  let score = clamp(wordCount * 9, 0, 45);
+  if (hasQualifier) score += 15;
+  if (hasMeasurement) score += 20;
+  if (hasNumber) score += 15;
+  if (!hasMeasurement && !hasNumber) score = Math.min(score, 65);
+
+  return { score: clamp(score), hasQualifier, hasMeasurement };
+}
 
 export function analyzePainPoint(result: GeneratorResult): DimensionAnalysis {
-  const { input, emails } = result;
-  const introEmail = emails.find((email) => email.slot === "introduction");
-  const introBody = introEmail ? getEmailPlainText(introEmail) : "";
-  const allBodies = emails.map((email) => getEmailPlainText(email)).join(" ");
+  const painPoint = result.input.painPoint;
 
-  const painPointWordCount = tokenize(input.painPoint).length;
-  const specificityScore = clamp(Math.min(100, painPointWordCount * 12));
+  if (!painPoint.trim()) {
+    return {
+      score: { dimension: "painPointSpecificity", label: "Pain Point Specificity", score: 0 },
+      recommendations: [
+        {
+          dimension: "painPointSpecificity",
+          severity: "critical",
+          message: "No pain point was provided — the sequence has nothing concrete to hook the reader with.",
+        },
+      ],
+      strengths: [],
+    };
+  }
 
-  const introOverlap = wordOverlapRatio(input.painPoint, introBody);
-  const reinforcedInFollowUps = emails
-    .filter((email) => email.slot !== "introduction")
-    .some((email) => wordOverlapRatio(input.painPoint, getEmailPlainText(email)) > 0.3);
-
-  const hasImpactLanguage = containsAny(allBodies, IMPACT_KEYWORDS);
-
-  const score = clamp(
-    Math.round(
-      specificityScore * 0.4 + introOverlap * 100 * 0.35 + (hasImpactLanguage ? 15 : 0) + (reinforcedInFollowUps ? 10 : 0)
-    )
-  );
-
+  const { score } = specificityBreakdown(painPoint);
   const recommendations: DimensionAnalysis["recommendations"] = [];
-  if (painPointWordCount < 4) {
+  const strengths: DimensionAnalysis["strengths"] = [];
+
+  if (score < 40) {
     recommendations.push({
-      dimension: "painPoint",
-      severity: "high",
-      message: "Pain point is too vague — describe the specific, day-to-day symptom instead of a one-word category.",
+      dimension: "painPointSpecificity",
+      severity: "warning",
+      message: `"${painPoint}" is fairly vague — describe the specific symptom (what's failing, where, or for whom) instead of a general category.`,
     });
-  }
-  if (introOverlap < 0.4) {
+  } else if (score < 70) {
     recommendations.push({
-      dimension: "painPoint",
-      severity: "medium",
-      message: "The pain point you entered barely shows up in the copy — make sure the introduction names it directly.",
+      dimension: "painPointSpecificity",
+      severity: "info",
+      message: `"${painPoint}" is moderately specific — adding a metric, channel, or segment (e.g. "...from mobile traffic") would sharpen it further.`,
     });
-  }
-  if (!hasImpactLanguage) {
-    recommendations.push({
-      dimension: "painPoint",
-      severity: "low",
-      message: "Add a concrete cost or consequence of the pain point (time lost, deals missed, revenue at risk).",
-    });
-  }
-  if (!reinforcedInFollowUps) {
-    recommendations.push({
-      dimension: "painPoint",
-      severity: "low",
-      message: "Reinforce the pain point in your follow-ups, not just the introduction.",
+  } else {
+    strengths.push({
+      dimension: "painPointSpecificity",
+      message: `"${painPoint}" is a specific, concrete pain point — it gives the copy something real to reference.`,
     });
   }
 
-  return { score: { dimension: "painPoint", label: "Pain Point", score }, recommendations };
+  return { score: { dimension: "painPointSpecificity", label: "Pain Point Specificity", score }, recommendations, strengths };
 }

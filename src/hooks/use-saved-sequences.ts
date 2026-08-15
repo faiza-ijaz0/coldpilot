@@ -8,6 +8,7 @@ import {
   buildSequenceRecord,
   cloneSequenceRecord,
   GENERATED_COUNT_STORAGE_KEY,
+  normalizeSavedSequence,
   SEQUENCES_STORAGE_KEY,
 } from "@/lib/storage/sequences";
 
@@ -20,10 +21,14 @@ const RECENT_LIMIT = 5;
  * (fresh mount reads current localStorage) with no separate sync layer.
  */
 export function useSavedSequences() {
-  const [sequences, setSequences] = useLocalStorageState<SavedSequence[]>(SEQUENCES_STORAGE_KEY, []);
+  const [rawSequences, setSequences] = useLocalStorageState<SavedSequence[]>(SEQUENCES_STORAGE_KEY, []);
   // Cumulative — never decrements, even when a sequence is later deleted, so
   // it answers "how many have I ever generated" distinctly from the live count.
   const [totalGenerated, setTotalGenerated] = useLocalStorageState<number>(GENERATED_COUNT_STORAGE_KEY, 0);
+
+  // Normalized on every read so records saved before a field (e.g. senderName)
+  // existed never crash newer code that assumes it's present.
+  const sequences = React.useMemo(() => rawSequences.map(normalizeSavedSequence), [rawSequences]);
 
   const createSequence = React.useCallback(
     (input: NewSequenceInput) => {

@@ -22,6 +22,8 @@ export interface SavedSequence {
   id: string;
   name: string;
   businessName: string;
+  senderName: string;
+  recipientFirstName?: string;
   industry: NicheId;
   targetAudience: string;
   painPoint: string;
@@ -40,6 +42,8 @@ export interface SavedSequence {
 export interface NewSequenceInput {
   name: string;
   businessName: string;
+  senderName: string;
+  recipientFirstName?: string;
   industry: NicheId;
   targetAudience: string;
   painPoint: string;

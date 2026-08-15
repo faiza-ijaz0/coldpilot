@@ -36,6 +36,8 @@ const ctaTypeOptions: { value: CTAType; label: string }[] = [
 
 const initialFormState = {
   businessName: "",
+  senderName: "",
+  recipientFirstName: "",
   industry: "saas" as NicheId,
   targetAudience: "",
   painPoint: "",
@@ -51,9 +53,11 @@ interface GeneratorFormProps {
 
 export function GeneratorForm({ onGenerate }: GeneratorFormProps) {
   const [form, setForm] = React.useState(initialFormState);
+  const [errors, setErrors] = React.useState<Partial<Record<keyof typeof initialFormState, string>>>({});
 
   function updateField<K extends keyof typeof initialFormState>(key: K, value: (typeof initialFormState)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+    setErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -61,20 +65,25 @@ export function GeneratorForm({ onGenerate }: GeneratorFormProps) {
 
     const required: [keyof typeof initialFormState, string][] = [
       ["businessName", "Business name"],
+      ["senderName", "Sender name"],
       ["targetAudience", "Target audience"],
       ["painPoint", "Pain point"],
       ["offer", "Offer"],
     ];
-    const missing = required.find(([key]) => !form[key].toString().trim());
-    if (missing) {
-      toast(`${missing[1]} is required`, {
+    const missing = required.filter(([key]) => !form[key].toString().trim());
+    if (missing.length > 0) {
+      setErrors(Object.fromEntries(missing.map(([key, label]) => [key, `${label} is required`])));
+      toast(`${missing[0][1]} is required`, {
         description: "Fill out every field so we can build a strong sequence for you.",
       });
       return;
     }
 
+    setErrors({});
     onGenerate({
       businessName: form.businessName.trim(),
+      senderName: form.senderName.trim(),
+      recipientFirstName: form.recipientFirstName.trim(),
       industry: form.industry,
       targetAudience: form.targetAudience.trim(),
       painPoint: form.painPoint.trim(),
@@ -108,20 +117,55 @@ export function GeneratorForm({ onGenerate }: GeneratorFormProps) {
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="industry">Industry / niche</Label>
-              <Select value={form.industry} onValueChange={(value) => updateField("industry", value as NicheId)}>
-                <SelectTrigger id="industry">
-                  <SelectValue placeholder="Select industry" />
-                </SelectTrigger>
-                <SelectContent>
-                  {nicheList.map((niche) => (
-                    <SelectItem key={niche.id} value={niche.id}>
-                      {niche.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="senderName">Sender name</Label>
+              <Input
+                id="senderName"
+                placeholder="e.g. Sarah Chen"
+                value={form.senderName}
+                onChange={(event) => updateField("senderName", event.target.value)}
+                aria-invalid={Boolean(errors.senderName)}
+                aria-describedby={errors.senderName ? "senderName-error" : undefined}
+              />
+              {errors.senderName ? (
+                <p id="senderName-error" role="alert" className="text-sm text-destructive">
+                  {errors.senderName}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Who these emails are signed by — shown in the sign-off instead of the business name.
+                </p>
+              )}
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="recipientFirstName">Recipient first name (optional)</Label>
+            <Input
+              id="recipientFirstName"
+              placeholder="e.g. John"
+              value={form.recipientFirstName}
+              onChange={(event) => updateField("recipientFirstName", event.target.value)}
+              aria-describedby="recipientFirstName-hint"
+            />
+            <p id="recipientFirstName-hint" className="text-xs text-muted-foreground">
+              Used in the greeting when provided (e.g. &ldquo;Hi John,&rdquo;). Leave blank to use a natural opener instead.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="industry">Industry / niche</Label>
+            <Select value={form.industry} onValueChange={(value) => updateField("industry", value as NicheId)}>
+              <SelectTrigger id="industry">
+                <SelectValue placeholder="Select industry" />
+              </SelectTrigger>
+              <SelectContent>
+                {nicheList.map((niche) => (
+                  <SelectItem key={niche.id} value={niche.id}>
+                    {niche.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex flex-col gap-2">

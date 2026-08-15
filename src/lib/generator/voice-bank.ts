@@ -8,12 +8,21 @@ export const greetingBank: Record<GeneratorTone, string[]> = {
   formal: ["Dear {{first_name}},", "Good afternoon {{first_name}},"],
 };
 
+/** Used when no recipient first name is supplied — a natural opener with no merge field, chosen per tone. */
+export const fallbackGreetingBank: Record<GeneratorTone, string[]> = {
+  professional: ["Hi there,", "Hello,"],
+  casual: ["Hey there,", "Hi,"],
+  friendly: ["Hi there!", "Hi team,"],
+  bold: ["Hi there —", "Team —"],
+  formal: ["Hello,", "Good afternoon,"],
+};
+
 export const signOffBank: Record<GeneratorTone, string[]> = {
-  professional: ["Best,\n{{businessName}}", "Best regards,\n{{businessName}}"],
-  casual: ["Cheers,\n{{businessName}}", "Talk soon,\n{{businessName}}"],
-  friendly: ["Talk soon,\n{{businessName}}", "Cheers,\n{{businessName}} 🙂"],
-  bold: ["— {{businessName}}", "{{businessName}}"],
-  formal: ["Kind regards,\n{{businessName}}", "Sincerely,\n{{businessName}}"],
+  professional: ["Best,\n{{senderName}}", "Best regards,\n{{senderName}}"],
+  casual: ["Cheers,\n{{senderName}}", "Talk soon,\n{{senderName}}"],
+  friendly: ["Talk soon,\n{{senderName}}", "Cheers,\n{{senderName}} 🙂"],
+  bold: ["— {{senderName}}", "{{senderName}}"],
+  formal: ["Kind regards,\n{{senderName}}", "Sincerely,\n{{senderName}}"],
 };
 
 export const postscriptBank: Record<GeneratorTone, string[]> = {

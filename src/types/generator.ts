@@ -17,6 +17,9 @@ export type EmailSlot = "introduction" | "follow-up" | "final-follow-up";
 
 export interface GeneratorInput {
   businessName: string;
+  senderName: string;
+  /** Optional — when present, used in the greeting (e.g. "Hi John,"). Otherwise a tone-appropriate fallback opener is used. */
+  recipientFirstName?: string;
   industry: NicheId;
   targetAudience: string;
   painPoint: string;

@@ -73,10 +73,14 @@ export function SequenceDetailDialog({
             <DialogTitle>{sequence.name}</DialogTitle>
           </DialogHeader>
 
-          <div className="grid grid-cols-2 gap-3 rounded-lg border border-border p-4 text-sm sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 rounded-lg border border-border p-4 text-sm sm:grid-cols-5">
             <div className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">Business</span>
               <span className="truncate font-medium">{sequence.businessName}</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Sender</span>
+              <span className="truncate font-medium">{sequence.senderName}</span>
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">Industry</span>

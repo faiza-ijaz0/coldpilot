@@ -1,6 +1,6 @@
-import { AlertCircle, AlertTriangle, Gauge, Info, ShieldCheck } from "lucide-react";
+import { AlertCircle, AlertTriangle, Gauge, Info, ShieldCheck, Sparkles } from "lucide-react";
 
-import type { QualityRecommendation, QualityScoreReport, RecommendationSeverity } from "@/types";
+import type { QualityRecommendation, QualityScoreReport, QualityStrength, RecommendationSeverity } from "@/types";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -17,15 +17,21 @@ function scoreTone(score: number): { label: string; textClass: string } {
 }
 
 const severityIcon: Record<RecommendationSeverity, typeof AlertTriangle> = {
-  high: AlertTriangle,
-  medium: AlertCircle,
-  low: Info,
+  critical: AlertTriangle,
+  warning: AlertCircle,
+  info: Info,
 };
 
 const severityTextClass: Record<RecommendationSeverity, string> = {
-  high: "text-destructive",
-  medium: "text-warning",
-  low: "text-muted-foreground",
+  critical: "text-destructive",
+  warning: "text-warning",
+  info: "text-muted-foreground",
+};
+
+const severityLabel: Record<RecommendationSeverity, string> = {
+  critical: "Critical",
+  warning: "Warning",
+  info: "Info",
 };
 
 function RecommendationRow({ recommendation }: { recommendation: QualityRecommendation }) {
@@ -33,7 +39,21 @@ function RecommendationRow({ recommendation }: { recommendation: QualityRecommen
   return (
     <li className="flex items-start gap-2.5 text-sm">
       <Icon className={cn("mt-0.5 h-4 w-4 shrink-0", severityTextClass[recommendation.severity])} />
-      <span className="text-muted-foreground">{recommendation.message}</span>
+      <span className="text-muted-foreground">
+        <span className={cn("mr-1.5 text-xs font-semibold uppercase tracking-wide", severityTextClass[recommendation.severity])}>
+          {severityLabel[recommendation.severity]}
+        </span>
+        {recommendation.message}
+      </span>
+    </li>
+  );
+}
+
+function StrengthRow({ strength }: { strength: QualityStrength }) {
+  return (
+    <li className="flex items-start gap-2.5 text-sm">
+      <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+      <span className="text-muted-foreground">{strength.message}</span>
     </li>
   );
 }
@@ -81,13 +101,35 @@ export function QualityScorePanel({ report }: QualityScorePanelProps) {
             return (
               <div key={dimension.dimension} className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{dimension.label}</span>
+                  <span className="font-medium">
+                    {dimension.label}
+                    <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                      {Math.round(dimension.weight * 100)}% of score
+                    </span>
+                  </span>
                   <span className={cn("font-medium", tone.textClass)}>{dimension.score}/100</span>
                 </div>
                 <Progress value={dimension.score} />
               </div>
             );
           })}
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-border pt-4">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            What&apos;s working
+          </span>
+          {report.strengths.length > 0 ? (
+            <ul className="flex flex-col gap-2.5">
+              {report.strengths.map((strength, index) => (
+                <StrengthRow key={index} strength={strength} />
+              ))}
+            </ul>
+          ) : (
+            <span className="text-sm text-muted-foreground">
+              Nothing stands out as a clear strength yet — see the recommendations below.
+            </span>
+          )}
         </div>
 
         <div className="flex flex-col gap-3 border-t border-border pt-4">

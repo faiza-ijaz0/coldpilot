@@ -25,6 +25,8 @@ export function GeneratorWorkspace() {
     const saved = createSequence({
       name: `${input.businessName} — ${input.targetAudience}`,
       businessName: input.businessName,
+      senderName: input.senderName,
+      recipientFirstName: input.recipientFirstName,
       industry: input.industry,
       targetAudience: input.targetAudience,
       painPoint: input.painPoint,
@@ -43,6 +45,8 @@ export function GeneratorWorkspace() {
     if (!current) return;
     generateAndSave({
       businessName: current.businessName,
+      senderName: current.senderName,
+      recipientFirstName: current.recipientFirstName,
       industry: current.industry,
       targetAudience: current.targetAudience,
       painPoint: current.painPoint,

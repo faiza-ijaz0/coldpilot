@@ -50,3 +50,47 @@ export function splitSentences(text: string): string[] {
     .map((sentence) => sentence.trim())
     .filter(Boolean);
 }
+
+/** Splits text into blank-line-separated paragraphs — mirrors how the generator joins greeting/body/CTA/sign-off. */
+export function splitParagraphs(text: string): string[] {
+  return text
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+}
+
+export function wordCount(text: string): number {
+  return tokenize(text).length;
+}
+
+/** Average words per sentence — a cheap proxy for run-on vs. choppy writing. */
+export function averageSentenceLength(text: string): number {
+  const sentences = splitSentences(text);
+  if (sentences.length === 0) return 0;
+  const total = sentences.reduce((sum, sentence) => sum + tokenize(sentence).length, 0);
+  return total / sentences.length;
+}
+
+/** Fraction of alphabetic characters that are uppercase — used to flag shouty ALL-CAPS text. */
+export function upperCaseRatio(text: string): number {
+  const letters = text.replace(/[^A-Za-z]/g, "");
+  if (letters.length === 0) return 0;
+  const upper = letters.replace(/[^A-Z]/g, "");
+  return upper.length / letters.length;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Whole-word/phrase, case-insensitive match — used to check whether a
+ * specific resolved value (a name, a business) is genuinely present in
+ * generated text, not just a substring of some unrelated word.
+ */
+export function containsPhrase(text: string, phrase: string): boolean {
+  const trimmed = phrase.trim();
+  if (!trimmed) return false;
+  const escaped = escapeRegExp(trimmed);
+  return new RegExp(`(?<![A-Za-z0-9])${escaped}(?![A-Za-z0-9])`, "i").test(text);
+}

@@ -1,4 +1,5 @@
-import type { NewSequenceInput, SavedSequence } from "@/types";
+import type { NewSequenceInput, SavedSequence, SavedSequenceEmail } from "@/types";
+import { findUnresolvedPlaceholders, stripUnresolvedPlaceholders } from "@/lib/template-utils";
 
 export const SEQUENCES_STORAGE_KEY = "coldpilot:sequences";
 export const GENERATED_COUNT_STORAGE_KEY = "coldpilot:sequences:generated-count";
@@ -14,6 +15,8 @@ export function buildSequenceRecord(input: NewSequenceInput): SavedSequence {
     id: generateId(),
     name: input.name.trim() || "Untitled sequence",
     businessName: input.businessName,
+    senderName: input.senderName,
+    recipientFirstName: input.recipientFirstName,
     industry: input.industry,
     targetAudience: input.targetAudience,
     painPoint: input.painPoint,
@@ -40,5 +43,39 @@ export function cloneSequenceRecord(original: SavedSequence): SavedSequence {
     emails: original.emails.map((email) => ({ ...email })),
     createdAt: now,
     updatedAt: now,
+  };
+}
+
+function sanitizeEmailText(text: string): string {
+  return findUnresolvedPlaceholders(text).length > 0 ? stripUnresolvedPlaceholders(text) : text;
+}
+
+/** Strips any unresolved `{{field}}` tokens left over from before placeholder resolution was fixed, so older saved sequences render cleanly instead of leaking merge fields. */
+function sanitizeSequenceEmails(emails: SavedSequenceEmail[]): SavedSequenceEmail[] {
+  let changed = false;
+  const next = emails.map((email) => {
+    const subject = sanitizeEmailText(email.subject);
+    const body = sanitizeEmailText(email.body);
+    if (subject === email.subject && body === email.body) return email;
+    changed = true;
+    return { ...email, subject, body };
+  });
+  return changed ? next : emails;
+}
+
+/**
+ * Backfills fields added after a sequence may have been persisted, so older
+ * localStorage records don't crash newer code that assumes they exist.
+ * `senderName` was added after `businessName` already existed, so old
+ * records fall back to the business name they were generated with.
+ */
+export function normalizeSavedSequence(sequence: SavedSequence): SavedSequence {
+  const needsSenderName = !sequence.senderName;
+  const sanitizedEmails = sanitizeSequenceEmails(sequence.emails);
+  if (!needsSenderName && sanitizedEmails === sequence.emails) return sequence;
+  return {
+    ...sequence,
+    senderName: needsSenderName ? sequence.businessName : sequence.senderName,
+    emails: sanitizedEmails,
   };
 }

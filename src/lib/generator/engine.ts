@@ -1,6 +1,6 @@
 import type { EmailSlot, GeneratedEmail, GeneratorInput, GeneratorResult } from "@/types";
-import { pick, fillPlaceholders, joinParagraphs } from "@/lib/template-utils";
-import { greetingBank, signOffBank, postscriptBank } from "@/lib/generator/voice-bank";
+import { pick, fillPlaceholders, joinParagraphs, findUnresolvedPlaceholders, stripUnresolvedPlaceholders } from "@/lib/template-utils";
+import { greetingBank, fallbackGreetingBank, signOffBank, postscriptBank } from "@/lib/generator/voice-bank";
 import { finalCtaBank } from "@/lib/generator/cta-bank";
 import { subjectBank } from "@/lib/generator/subject-bank";
 import { elaborationBank } from "@/lib/generator/elaboration-bank";
@@ -22,6 +22,20 @@ function buildStageSentences(stages: string[][], values: Record<string, string>)
   return stages.map((stagePool) => fillPlaceholders(pick(stagePool), values));
 }
 
+/** Never leaves a `{{first_name}}` (or any other) merge field in the output — falls back to a tone-appropriate opener when no recipient name was supplied. */
+function buildGreeting(input: GeneratorInput, values: Record<string, string>): string {
+  const firstName = input.recipientFirstName?.trim();
+  if (firstName) {
+    return fillPlaceholders(pick(greetingBank[input.tone]), { ...values, first_name: firstName });
+  }
+  return pick(fallbackGreetingBank[input.tone]);
+}
+
+/** Final safety net: a template referencing a field the values map doesn't have must never leak `{{field}}` into the output. */
+function finalizeText(text: string): string {
+  return findUnresolvedPlaceholders(text).length > 0 ? stripUnresolvedPlaceholders(text) : text;
+}
+
 function assembleBody(
   stageSentences: string[],
   ctaLine: string,
@@ -29,7 +43,7 @@ function assembleBody(
   values: Record<string, string>,
   extras?: IntroExtras
 ): string {
-  const greeting = fillPlaceholders(pick(greetingBank[input.tone]), values);
+  const greeting = buildGreeting(input, values);
   const signOff = fillPlaceholders(pick(signOffBank[input.tone]), values);
 
   const orderedSentences = [extras?.personalizedIntro, ...stageSentences, extras?.industryPainPoint].filter(
@@ -75,8 +89,8 @@ function buildEmail(
   return {
     slot,
     label: SLOT_LABELS[slot],
-    subject,
-    body,
+    subject: finalizeText(subject),
+    body: finalizeText(body),
     format: "plain",
     delayDays,
   };
@@ -95,6 +109,9 @@ export function generateSequence(input: GeneratorInput): GeneratorResult {
 
   const values: Record<string, string> = {
     businessName: input.businessName,
+    // Templates also refer to the business as {{company}} — same value, different wording.
+    company: input.businessName,
+    senderName: input.senderName,
     industry: industryLabel,
     targetAudience: input.targetAudience,
     painPoint: input.painPoint,
