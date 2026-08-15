@@ -38,7 +38,7 @@ export function AnalyticsDashboard() {
             icon={Mail}
             label="Total generated sequences"
             value={totalGenerated.toLocaleString()}
-            hint="Every generation, including regenerations"
+            hint="Every sequence you've created — regenerating one doesn't count again"
           />
         </StaggerItem>
         <StaggerItem>

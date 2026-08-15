@@ -59,14 +59,14 @@ export function useSavedSequences() {
   );
 
   const duplicateSequence = React.useCallback(
-    (id: string) => {
-      setSequences((prev) => {
-        const original = prev.find((sequence) => sequence.id === id);
-        if (!original) return prev;
-        return [cloneSequenceRecord(original), ...prev];
-      });
+    (id: string): SavedSequence | null => {
+      const original = rawSequences.find((sequence) => sequence.id === id);
+      if (!original) return null;
+      const cloned = cloneSequenceRecord(original);
+      setSequences((prev) => [cloned, ...prev]);
+      return cloned;
     },
-    [setSequences]
+    [rawSequences, setSequences]
   );
 
   const renameSequence = React.useCallback(

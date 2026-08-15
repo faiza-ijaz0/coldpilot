@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion, type Variants } from "framer-motion";
-import { ClipboardCopy, Copy, Download, FileCode2, FileText, FileType2, Pencil, RefreshCw } from "lucide-react";
+import { ClipboardCopy, Copy, CopyPlus, Download, FileCode2, FileText, FileType2, Pencil, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import type { EmailSlot, SavedSequence, SavedSequenceEmail } from "@/types";
@@ -33,6 +33,7 @@ import { EmailEditorDialog } from "@/components/email-editor/email-editor-dialog
 interface GeneratorOutputPanelProps {
   sequence: SavedSequence | null;
   onRegenerate: () => void;
+  onSaveAsNew: () => void;
   onUpdateEmail: (slot: EmailSlot, updates: { subject: string; body: string }) => void;
 }
 
@@ -90,7 +91,7 @@ async function copyEmail(email: SavedSequenceEmail) {
   }
 }
 
-export function GeneratorOutputPanel({ sequence, onRegenerate, onUpdateEmail }: GeneratorOutputPanelProps) {
+export function GeneratorOutputPanel({ sequence, onRegenerate, onSaveAsNew, onUpdateEmail }: GeneratorOutputPanelProps) {
   const [editingSlot, setEditingSlot] = React.useState<EmailSlot | null>(null);
   const editingEmail = sequence?.emails.find((email) => email.slot === editingSlot) ?? null;
 
@@ -171,6 +172,11 @@ export function GeneratorOutputPanel({ sequence, onRegenerate, onUpdateEmail }: 
               <Button variant="outline" size="sm" className="gap-1.5" onClick={onRegenerate}>
                 <RefreshCw className="h-3.5 w-3.5" />
                 Regenerate
+              </Button>
+
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={onSaveAsNew}>
+                <CopyPlus className="h-3.5 w-3.5" />
+                Save as New
               </Button>
             </div>
           ) : null}
