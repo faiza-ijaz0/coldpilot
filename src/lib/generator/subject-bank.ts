@@ -6,7 +6,7 @@ export const subjectBank: Record<EmailSlot, string[]> = {
     "{{painPoint}} — worth 2 minutes?",
     "idea for {{company}}",
     "how {{industry}} teams are handling {{painPoint}}",
-    "{{businessName}} <> {{company}}",
+    "{{businessName}} for {{targetAudience}}",
   ],
   "follow-up": [
     "re: {{painPoint}}",

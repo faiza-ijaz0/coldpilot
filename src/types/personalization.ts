@@ -7,7 +7,8 @@ export type NicheId =
   | "real-estate"
   | "healthcare"
   | "ecommerce"
-  | "education";
+  | "education"
+  | "barbershop";
 
 /** Industry-specific vocabulary — the terms that make copy read as written by an insider. */
 export interface NicheVocabulary {

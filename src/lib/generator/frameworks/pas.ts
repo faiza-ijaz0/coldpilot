@@ -27,7 +27,7 @@ export const pasFramework: FrameworkDefinition = {
     ],
     [
       "{{offer}} is designed to fix this in weeks, not quarters — happy to walk through how.",
-      "If useful, I can show exactly how {{businessName}} solves this for teams like {{company}}.",
+      "If useful, I can show exactly how {{businessName}} solves this for teams like yours.",
     ],
   ],
   finalFollowUp: [

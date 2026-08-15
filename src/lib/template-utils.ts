@@ -54,3 +54,13 @@ export function resolveTemplate(text: string, values: Record<string, string>): s
 export function joinParagraphs(paragraphs: string[]): string {
   return paragraphs.filter(Boolean).join("\n\n");
 }
+
+/**
+ * Capitalizes the first letter at the start of the text and after every
+ * sentence/paragraph break — free-text user input (like an offer starting
+ * with "an") can leave a sentence starting lowercase once it's dropped into
+ * a template, and that reads as sloppy in outreach copy.
+ */
+export function capitalizeSentences(text: string): string {
+  return text.replace(/(^|[.!?]\s+|\n)([a-z])/g, (_match, boundary: string, letter: string) => `${boundary}${letter.toUpperCase()}`);
+}

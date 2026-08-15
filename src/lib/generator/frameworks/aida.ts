@@ -31,7 +31,7 @@ export const aidaFramework: FrameworkDefinition = {
       "One thing I didn't mention last time: {{offer}} usually pays for itself just from the time {{targetAudience}} get back.",
     ],
     [
-      "If {{painPoint}} is still on your plate, happy to show exactly how {{businessName}} handles it for teams like {{company}}.",
+      "If {{painPoint}} is still on your plate, happy to show exactly how {{businessName}} handles it for teams like yours.",
       "Still think this could save {{company}} real time on {{painPoint}} — happy to make the case in 15 minutes.",
       "If it's helpful, I can share how a similar {{industry}} team solved this with {{businessName}} in about a week.",
     ],
