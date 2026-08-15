@@ -4,6 +4,8 @@ import * as React from "react";
 import { Bold, Eraser, Italic, Link2, List, ListOrdered, Redo2, Underline, Undo2 } from "lucide-react";
 
 import { stripHtmlTags } from "@/lib/html-utils";
+import { sanitizeEmailHtml } from "@/lib/security/sanitize-html";
+import { isSafeUrl } from "@/lib/security/safe-url";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,7 +34,11 @@ export function EmailBodyEditor({ initialHtml, onChange }: EmailBodyEditorProps)
   const [plainText, setPlainText] = React.useState(() => stripHtmlTags(initialHtml));
 
   React.useEffect(() => {
-    if (editorRef.current) editorRef.current.innerHTML = initialHtml;
+    // Sanitized even though callers should already be passing clean HTML —
+    // the editor shouldn't trust its own input boundary any more than a
+    // paste event, since this is what mounts a legacy saved sequence's HTML
+    // straight into a live contentEditable DOM.
+    if (editorRef.current) editorRef.current.innerHTML = sanitizeEmailHtml(initialHtml);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -86,6 +92,36 @@ export function EmailBodyEditor({ initialHtml, onChange }: EmailBodyEditorProps)
     syncPlainText();
   }
 
+  /**
+   * Pasted content is the one place genuinely untrusted HTML can enter the
+   * editor (typing and toolbar formatting only ever produce browser-native
+   * b/i/u/ul/ol/li/a tags). Sanitize before it ever touches the live DOM,
+   * rather than letting the browser insert it natively and cleaning up
+   * after — plain-text paste (no HTML on the clipboard) is untouched.
+   */
+  function handlePaste(event: React.ClipboardEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const html = event.clipboardData.getData("text/html");
+    const text = event.clipboardData.getData("text/plain");
+
+    if (html) {
+      document.execCommand("insertHTML", false, sanitizeEmailHtml(html));
+    } else if (text) {
+      document.execCommand("insertText", false, text);
+    }
+
+    const editor = editorRef.current;
+    if (editor) {
+      const normalized = normalizeEditorHtml(editor.innerHTML);
+      if (normalized !== editor.innerHTML) {
+        editor.innerHTML = normalized;
+        moveCursorToEnd(editor);
+      }
+    }
+
+    handleInput();
+  }
+
   function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     if (!(event.ctrlKey || event.metaKey)) return;
     const key = event.key.toLowerCase();
@@ -102,8 +138,12 @@ export function EmailBodyEditor({ initialHtml, onChange }: EmailBodyEditorProps)
   }
 
   function applyLink() {
-    if (!linkUrl.trim()) return;
-    runCommand("createLink", linkUrl.trim());
+    const trimmedUrl = linkUrl.trim();
+    // Only http:, https:, and mailto: are ever allowed — anything else
+    // (javascript:, data:, vbscript:, malformed input) is rejected outright
+    // rather than merely checked for being non-empty.
+    if (!isSafeUrl(trimmedUrl)) return;
+    runCommand("createLink", trimmedUrl);
     setLinkUrl("");
     setLinkBarOpen(false);
   }
@@ -208,6 +248,7 @@ export function EmailBodyEditor({ initialHtml, onChange }: EmailBodyEditorProps)
         contentEditable
         suppressContentEditableWarning
         onInput={handleInput}
+        onPaste={handlePaste}
         onKeyUp={refreshActiveCommands}
         onMouseUp={refreshActiveCommands}
         onKeyDown={handleKeyDown}

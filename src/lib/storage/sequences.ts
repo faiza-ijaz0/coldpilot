@@ -1,5 +1,6 @@
 import type { NewSequenceInput, SavedSequence, SavedSequenceEmail } from "@/types";
 import { findUnresolvedPlaceholders, stripUnresolvedPlaceholders } from "@/lib/template-utils";
+import { sanitizeEmailHtml } from "@/lib/security/sanitize-html";
 
 export const SEQUENCES_STORAGE_KEY = "coldpilot:sequences";
 export const GENERATED_COUNT_STORAGE_KEY = "coldpilot:sequences:generated-count";
@@ -50,12 +51,22 @@ function sanitizeEmailText(text: string): string {
   return findUnresolvedPlaceholders(text).length > 0 ? stripUnresolvedPlaceholders(text) : text;
 }
 
-/** Strips any unresolved `{{field}}` tokens left over from before placeholder resolution was fixed, so older saved sequences render cleanly instead of leaking merge fields. */
+/**
+ * Strips any unresolved `{{field}}` tokens left over from before
+ * placeholder resolution was fixed, and re-runs HTML-format bodies through
+ * the shared sanitizer — so older saved sequences (persisted before
+ * sanitization existed, or edited outside the app) render cleanly and
+ * safely instead of leaking merge fields or unsafe markup. Plain-text
+ * bodies are left untouched: they're never rendered as HTML, so running
+ * them through an HTML sanitizer would only risk mangling literal `<`/`&`
+ * characters the user actually typed.
+ */
 function sanitizeSequenceEmails(emails: SavedSequenceEmail[]): SavedSequenceEmail[] {
   let changed = false;
   const next = emails.map((email) => {
     const subject = sanitizeEmailText(email.subject);
-    const body = sanitizeEmailText(email.body);
+    const placeholdersResolved = sanitizeEmailText(email.body);
+    const body = email.format === "html" ? sanitizeEmailHtml(placeholdersResolved) : placeholdersResolved;
     if (subject === email.subject && body === email.body) return email;
     changed = true;
     return { ...email, subject, body };

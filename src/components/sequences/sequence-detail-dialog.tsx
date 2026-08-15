@@ -9,6 +9,7 @@ import { frameworkName } from "@/lib/generator/frameworks";
 import { getNicheConfig } from "@/lib/personalization/engine";
 import { toneOptions } from "@/lib/generator/tone-options";
 import { getEmailPlainText } from "@/lib/html-utils";
+import { sanitizeEmailHtml } from "@/lib/security/sanitize-html";
 import { formatEmailAsText } from "@/lib/export/format-text";
 import { scoreSequence } from "@/lib/quality-score/score-engine";
 import { toScorableResult } from "@/lib/quality-score/adapters";
@@ -148,7 +149,7 @@ export function SequenceDetailDialog({
                 {email.format === "html" ? (
                   <div
                     className="text-sm text-muted-foreground [&_a]:text-primary [&_a]:underline [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5"
-                    dangerouslySetInnerHTML={{ __html: email.body }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(email.body) }}
                   />
                 ) : (
                   <p className="whitespace-pre-line text-sm text-muted-foreground">{email.body}</p>
