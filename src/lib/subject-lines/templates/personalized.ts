@@ -1,9 +1,9 @@
 /** Personalized — references the recipient specifically. */
 export const personalizedTemplates: string[] = [
-  "{{first_name}}, quick one about {{company}}",
-  "{{businessName}} <> {{company}}",
-  "for {{first_name}} at {{company}}",
-  "{{first_name}} — saw this and thought of {{company}}",
-  "quick question, {{first_name}}",
+  "quick one about {{company}}",
+  "{{company}} <> {{industry}}",
+  "a note for the team at {{company}}",
+  "saw this and thought of {{company}}",
+  "{{company}}, got a quick question",
   "{{company}}'s {{industry}} approach",
 ];

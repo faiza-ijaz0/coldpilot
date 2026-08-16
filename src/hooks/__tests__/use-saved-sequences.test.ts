@@ -2,7 +2,8 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { useSavedSequences } from "@/hooks/use-saved-sequences";
-import type { EmailBodyFormat, NewSequenceInput } from "@/types";
+import { SEQUENCES_STORAGE_KEY } from "@/lib/storage/sequences";
+import type { EmailBodyFormat, NewSequenceInput, SavedSequence } from "@/types";
 
 function buildNewSequenceInput(overrides?: Partial<NewSequenceInput>): NewSequenceInput {
   return {
@@ -279,5 +280,148 @@ describe("useSavedSequences — regenerate vs. create identity", () => {
     expect(restored?.id).toBe(id);
     expect(restored?.score).toBe(95);
     expect(restored?.emails[0]?.subject).toBe("the latest regenerated subject");
+  });
+});
+
+function buildValidRawSequence(overrides?: Partial<SavedSequence>): SavedSequence {
+  return {
+    id: "seq-valid-1",
+    name: "Valid Co",
+    businessName: "Valid Co",
+    senderName: "Faiza Ijaz",
+    recipientFirstName: "",
+    industry: "saas",
+    targetAudience: "founders",
+    painPoint: "slow onboarding",
+    offer: "a faster onboarding flow",
+    tone: "professional",
+    emailLength: "medium",
+    ctaType: "quick-reply",
+    framework: "AIDA",
+    emails: [
+      {
+        slot: "introduction",
+        label: "Email 1 — Introduction",
+        subject: "subject",
+        body: "body",
+        format: "plain",
+        delayDays: 0,
+      },
+    ],
+    score: 80,
+    status: "draft",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+/** Seeds localStorage with exactly what a corrupted/hand-edited record would look like, bypassing the app's own write path entirely — mirrors how real malformed data actually reaches the hook. */
+function seedRawSequences(records: unknown[]) {
+  window.localStorage.setItem(SEQUENCES_STORAGE_KEY, JSON.stringify(records));
+}
+
+describe("useSavedSequences — malformed localStorage resilience", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it("does not throw when a saved record's emails field is missing", () => {
+    const record: Record<string, unknown> = { ...buildValidRawSequence() };
+    delete record.emails;
+    seedRawSequences([record]);
+
+    const { result } = renderHook(() => useSavedSequences());
+
+    expect(result.current.sequences).toHaveLength(1);
+    expect(result.current.sequences[0]?.emails).toEqual([]);
+  });
+
+  it("does not throw when a saved record's emails field is null, and recovers the rest of the record", () => {
+    seedRawSequences([{ ...buildValidRawSequence(), emails: null }]);
+
+    const { result } = renderHook(() => useSavedSequences());
+
+    expect(result.current.sequences).toHaveLength(1);
+    expect(result.current.sequences[0]?.emails).toEqual([]);
+    expect(result.current.sequences[0]?.businessName).toBe("Valid Co");
+  });
+
+  it("does not throw when a saved record's emails field is a non-array (object/string/number)", () => {
+    for (const emails of [{}, "not an array", 42]) {
+      window.localStorage.clear();
+      seedRawSequences([{ ...buildValidRawSequence(), emails }]);
+
+      expect(() => renderHook(() => useSavedSequences())).not.toThrow();
+    }
+  });
+
+  it("does not throw when a saved record contains malformed individual email entries", () => {
+    seedRawSequences([
+      {
+        ...buildValidRawSequence(),
+        emails: [null, "not an email", 42, { subject: "ok", body: "ok body" }],
+      },
+    ]);
+
+    const { result } = renderHook(() => useSavedSequences());
+
+    expect(result.current.sequences).toHaveLength(1);
+    expect(result.current.sequences[0]?.emails).toHaveLength(1);
+    expect(result.current.sequences[0]?.emails[0]?.subject).toBe("ok");
+  });
+
+  it("drops only records with no usable id, while keeping every valid record", () => {
+    const valid1 = buildValidRawSequence({ id: "seq-a", name: "First" });
+    const valid2 = buildValidRawSequence({ id: "seq-b", name: "Second" });
+    seedRawSequences([valid1, null, { foo: "bar" }, "just a string", 42, valid2]);
+
+    const { result } = renderHook(() => useSavedSequences());
+
+    expect(result.current.sequences).toHaveLength(2);
+    expect(result.current.sequences.map((sequence) => sequence.id).sort()).toEqual(["seq-a", "seq-b"]);
+  });
+
+  it("does not throw when the entire top-level value is not an array", () => {
+    window.localStorage.setItem(SEQUENCES_STORAGE_KEY, JSON.stringify({ not: "an array" }));
+
+    expect(() => renderHook(() => useSavedSequences())).not.toThrow();
+    const { result } = renderHook(() => useSavedSequences());
+    expect(result.current.sequences).toEqual([]);
+  });
+
+  it("one malformed record does not affect operations (create/duplicate/delete) on a co-existing valid record", () => {
+    const valid = buildValidRawSequence({ id: "seq-valid", name: "Valid" });
+    seedRawSequences([valid, { id: "seq-corrupt", emails: null }]);
+
+    const { result } = renderHook(() => useSavedSequences());
+    expect(result.current.sequences).toHaveLength(2);
+
+    act(() => {
+      result.current.duplicateSequence("seq-valid");
+    });
+    expect(result.current.sequences).toHaveLength(3);
+
+    act(() => {
+      result.current.deleteSequence("seq-valid");
+    });
+    expect(result.current.sequences.some((sequence) => sequence.id === "seq-valid")).toBe(false);
+  });
+
+  it("duplicating a record whose raw emails are malformed does not throw", () => {
+    seedRawSequences([{ ...buildValidRawSequence({ id: "seq-corrupt" }), emails: "broken" }]);
+    const { result } = renderHook(() => useSavedSequences());
+
+    let clonedIsNull = true;
+    let clonedEmailsLength = -1;
+    act(() => {
+      const cloned = result.current.duplicateSequence("seq-corrupt");
+      clonedIsNull = cloned === null;
+      clonedEmailsLength = cloned?.emails.length ?? -1;
+    });
+
+    expect(clonedIsNull).toBe(false);
+    expect(clonedEmailsLength).toBe(0);
+    expect(result.current.sequences).toHaveLength(2);
   });
 });

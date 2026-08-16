@@ -1,5 +1,5 @@
 import type { GeneratedSubjectLine, SubjectLineInput, SubjectLineResult } from "@/types";
-import { fillPlaceholders, pickMany } from "@/lib/template-utils";
+import { pickMany, resolveTemplate } from "@/lib/template-utils";
 import { getNicheConfig } from "@/lib/personalization/engine";
 import { subjectLineCategories } from "@/lib/subject-lines/categories";
 import { subjectLineTemplates } from "@/lib/subject-lines/templates";
@@ -16,6 +16,9 @@ export function generateSubjectLines(input: SubjectLineInput): SubjectLineResult
   const industryLabel = getNicheConfig(input.industry).label;
   const values: Record<string, string> = {
     businessName: input.businessName,
+    // Templates also refer to the business as {{company}} — same value, different wording
+    // (mirrors the alias in the main generator engine, src/lib/generator/engine.ts).
+    company: input.businessName,
     industry: industryLabel,
     targetAudience: input.targetAudience,
     painPoint: input.painPoint,
@@ -28,7 +31,7 @@ export function generateSubjectLines(input: SubjectLineInput): SubjectLineResult
     return variants.map((template, index) => ({
       id: `${category.value}-${index}-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
       category: category.value,
-      text: fillPlaceholders(template, values),
+      text: resolveTemplate(template, values),
     }));
   });
 

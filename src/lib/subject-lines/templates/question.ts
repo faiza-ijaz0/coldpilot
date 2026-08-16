@@ -1,9 +1,9 @@
 /** Question Based — phrased as a direct question. */
 export const questionTemplates: string[] = [
   "is {{painPoint}} still an issue at {{company}}?",
-  "worth 2 minutes, {{first_name}}?",
+  "worth 2 minutes for {{company}}?",
   "who handles {{painPoint}} at {{company}}?",
   "could {{offer}} help {{targetAudience}} at {{company}}?",
-  "is this even the right time, {{first_name}}?",
+  "is this the right time for {{company}}?",
   "what's {{company}} doing about {{painPoint}}?",
 ];
