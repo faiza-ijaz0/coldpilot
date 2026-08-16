@@ -1,5 +1,7 @@
 # ColdPilot — Cold Outreach Sequence Generator
 
+[![CI](https://github.com/faiza-ijaz0/coldpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/faiza-ijaz0/coldpilot/actions/workflows/ci.yml)
+
 ColdPilot is a Next.js application for building, scoring, managing, and
 exporting cold email outreach. It generates 3-email sequences from
 proven copywriting frameworks, personalizes them to a business's niche and
@@ -265,6 +267,14 @@ The app is a standard Next.js App Router project with no custom server code,
 so it deploys to [Vercel](https://vercel.com) directly — connect the
 repository and deploy with default settings. No environment variables need
 to be configured.
+
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull
+request targeting `main`: `npm ci`, then type-checking (`tsc --noEmit`),
+linting, the full test suite, and a production build, in that order. Any
+failing step fails the workflow — there are no soft-fail or skipped checks.
+The workflow requires no secrets or environment variables.
 
 ## Testing
 
